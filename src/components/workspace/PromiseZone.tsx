@@ -85,7 +85,7 @@ export function PromiseZone({ account }: { account: Account }) {
   );
 
   return (
-    <section className="card p-5">
+    <section className="card p-4">
       <ZoneHeader
         index={3}
         title="Log promise to pay"
@@ -182,7 +182,7 @@ export function PromiseZone({ account }: { account: Account }) {
       </div>
 
       {/* Logged promises for this account */}
-      <div className="mt-5 border-t border-[var(--line)] pt-4">
+      <div className="mt-4 border-t border-[var(--line)] pt-3">
         <div className="flex items-center justify-between">
           <span className="eyebrow">
             Promises on this account · {accountPromises.length}

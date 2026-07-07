@@ -9,7 +9,7 @@ export function ZoneHeader({
   trailing?: React.ReactNode;
 }) {
   return (
-    <div className="mb-4 flex items-center justify-between gap-3">
+    <div className="mb-3 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2.5">
         <span className="flex h-5 min-w-5 items-center justify-center rounded-[5px] bg-[var(--neutral-wash)] px-1 text-[12px] font-semibold text-ink-secondary tnum">
           {index}

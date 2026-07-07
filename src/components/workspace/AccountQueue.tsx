@@ -198,7 +198,7 @@ export function AccountQueue({
           <ul className="space-y-1">
             {filtered.map((a) => (
               <QueueRow
-                key={a.company_uuid + a.dpd_days}
+                key={`${a.company_uuid}__${a.dpd_days}`}
                 account={a}
                 selected={a.company_uuid === selectedUuid}
                 contacted={contactedUuids.has(a.company_uuid)}

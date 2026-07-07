@@ -142,13 +142,21 @@ export function Workspace({
         className="scroll-thin min-h-0 overflow-y-auto bg-[var(--plane)]"
       >
         {selected ? (
-          <div className="mx-auto max-w-3xl space-y-4 p-5 pb-16">
-            <ClientDataZone account={selected} />
-            <RecommendationZone key={keyOf(selected)} account={selected} />
-            <PromiseZone key={keyOf(selected)} account={selected} />
+          <div className="mx-auto grid max-w-6xl gap-3 p-5 pb-8 lg:grid-cols-2 lg:items-start">
+            {/* Two-column workspace: context (zone 1) spans the top, then the two
+                action zones sit side by side so an agent sees all sections in one
+                screen without scrolling (PRODUCT.md: everything on one screen). It
+                collapses to a single stacked column below lg. */}
+            <div className="lg:col-span-2">
+              <ClientDataZone account={selected} />
+            </div>
+            {/* Distinct key prefixes: both zones remount on account change, but
+                sibling keys must be unique or React drops one of them. */}
+            <RecommendationZone key={`rec-${keyOf(selected)}`} account={selected} />
+            <PromiseZone key={`promise-${keyOf(selected)}`} account={selected} />
 
             {/* Zone 4 — navigation */}
-            <nav className="card flex items-center justify-between gap-3 p-3">
+            <nav className="card flex items-center justify-between gap-3 p-3 lg:col-span-2">
               <button
                 className="btn btn-secondary"
                 onClick={() => go(-1)}

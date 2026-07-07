@@ -11,7 +11,7 @@ export function ClientDataZone({ account }: { account: Account }) {
   const tone = dpdTone(account.dpd_days);
 
   return (
-    <section className="card p-5">
+    <section className="card p-4">
       <ZoneHeader index={1} title="Client account" />
 
       {/* Identity row */}
@@ -30,17 +30,17 @@ export function ClientDataZone({ account }: { account: Account }) {
       </div>
 
       {/* Amount due — the prominent figure */}
-      <div className="mt-5 flex flex-wrap items-end justify-between gap-4 rounded-[10px] border border-[var(--line)] bg-[var(--surface-2)] px-5 py-4">
+      <div className="mt-4 flex flex-wrap items-end justify-between gap-4 rounded-[10px] border border-[var(--line)] bg-[var(--surface-2)] px-5 py-3">
         <div>
           <span className="eyebrow">Amount due</span>
-          <div className="tnum mt-1 text-[34px] font-semibold leading-none tracking-tight text-ink">
+          <div className="tnum mt-1 text-[28px] font-semibold leading-none tracking-tight text-ink">
             {formatUSDExact(account.amount_due_usd)}
           </div>
         </div>
         <div className="text-right">
           <span className="eyebrow">Days past due</span>
           <div
-            className="tnum mt-1 text-[34px] font-semibold leading-none tracking-tight"
+            className="tnum mt-1 text-[28px] font-semibold leading-none tracking-tight"
             style={{ color: `var(--${tone})` }}
           >
             {account.dpd_days}
@@ -52,7 +52,7 @@ export function ClientDataZone({ account }: { account: Account }) {
       </div>
 
       {/* Detail grid */}
-      <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
         <DataField label="Credit line" mono>
           {formatUSD(account.credit_line_usd)}
         </DataField>
@@ -76,7 +76,7 @@ export function ClientDataZone({ account }: { account: Account }) {
 
       {/* Notes */}
       {account.notes && (
-        <div className="mt-5 border-t border-[var(--line)] pt-4">
+        <div className="mt-4 border-t border-[var(--line)] pt-3">
           <span className="eyebrow">Agent notes</span>
           <p className="mt-1.5 text-[13px] leading-relaxed text-ink-secondary">
             {account.notes}
@@ -86,7 +86,7 @@ export function ClientDataZone({ account }: { account: Account }) {
 
       {/* Data quality flags */}
       {account.data_quality_flags.length > 0 && (
-        <div className="mt-5 border-t border-[var(--line)] pt-4">
+        <div className="mt-4 border-t border-[var(--line)] pt-3">
           <span className="eyebrow">Data quality flags</span>
           <div className="mt-2 flex flex-wrap gap-2">
             {account.data_quality_flags.map((flag) => (

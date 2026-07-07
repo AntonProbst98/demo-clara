@@ -78,7 +78,7 @@ export function RecommendationZone({ account }: { account: Account }) {
   }, []);
 
   return (
-    <section className="card p-5">
+    <section className="card p-4">
       <ZoneHeader
         index={2}
         title="Negotiation recommendation"
@@ -117,7 +117,7 @@ export function RecommendationZone({ account }: { account: Account }) {
           </div>
 
           {/* Script generation */}
-          <div className="mt-5 border-t border-[var(--line)] pt-4">
+          <div className="mt-4 border-t border-[var(--line)] pt-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <span className="text-[13px] font-semibold text-ink">
@@ -181,7 +181,7 @@ export function RecommendationZone({ account }: { account: Account }) {
                     <kbd className="kbd">C</kbd>
                   </button>
                 </div>
-                <p className="whitespace-pre-wrap px-4 py-4 text-[13px] leading-relaxed text-ink">
+                <p className="scroll-thin max-h-[240px] overflow-y-auto whitespace-pre-wrap px-4 py-4 text-[13px] leading-relaxed text-ink">
                   {script.script}
                 </p>
               </div>

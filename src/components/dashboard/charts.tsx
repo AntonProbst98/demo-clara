@@ -17,11 +17,12 @@ type Metric = "amount" | "count";
 // Severity tones for the DPD buckets (ordinal risk → status palette, not a
 // decorative rainbow). Buckets always arrive in fixed severity order.
 const DPD_TONE: Record<string, string> = {
-  "0-30": "var(--good)",
+  "1-30": "var(--good)",
   "31-60": "var(--warning)",
   "61-90": "var(--warning)",
   "91-180": "var(--critical)",
-  "180+": "var(--critical)",
+  "181-365": "var(--critical)",
+  "365+": "var(--critical)",
 };
 
 function fmt(metric: Metric, v: number) {

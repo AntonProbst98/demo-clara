@@ -1,8 +1,17 @@
 import type { Account, Promise } from "./types";
 
 // Fixed display order for DPD buckets so charts/queues never sort them
-// lexicographically ("180+" before "31-60").
-export const DPD_BUCKET_ORDER = ["0-30", "31-60", "61-90", "91-180", "180+"];
+// lexicographically ("181-365" before "31-60"). These labels MUST match the
+// `dpd_bucket` values emitted by the upstream cleaning pipeline exactly —
+// anything not listed here is dropped from charts and the queue filter.
+export const DPD_BUCKET_ORDER = [
+  "1-30",
+  "31-60",
+  "61-90",
+  "91-180",
+  "181-365",
+  "365+",
+];
 
 export interface CountBucket {
   key: string;
