@@ -1,0 +1,189 @@
+{
+  "name": "Collections Data Pipeline \u2014 clean, validate, policy (n8n Cloud)",
+  "nodes": [
+    {
+      "parameters": {
+        "notes": "PRODUCTION: replace with a Schedule Trigger (daily) reading the source of record."
+      },
+      "id": "c3000000-0000-4000-8000-000000000001",
+      "name": "Manual Trigger (daily in prod)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === Raw Collections Export (hardcoded \u2014 n8n Cloud has no disk access) ===\n// In production a Schedule Trigger (daily) would feed this from the source of\n// record (CRM/ERP export, Google Sheet, S3, or a DB query node). For the demo,\n// paste your exported rows below using the RAW column names.\n//\n//  >>>>>>>>>>>>>>>>>>>>>>>  PASTE RAW ROWS HERE  <<<<<<<<<<<<<<<<<<<<<<<\n\nconst rows = [\n  {\n    Company_UUID: \"d8e6ca3a-0127-4456-ac3a-b7484cf929be\",\n    Segment: \"FPD\",\n    Credit_Line_USD: 50,\n    Collections_Channel: \"Internal collections\",\n    Amount_Due_USD: 128105.3388,\n    DPD_days: 30,\n    Billing_Cycle: \"Monthly Cutoff 19\",\n    Notes: null,\n    Record_status: \"Active\",\n    Data_source: \"CRM_export_v2\",\n  },\n  {\n    Company_UUID: \"a2c1f0aa-1111-4a10-9b22-000000000002\",\n    Segment: \"Regular\",\n    Credit_Line_USD: 250000,\n    Collections_Channel: \"External agency 1\",\n    Amount_Due_USD: 9299.73,\n    DPD_days: 359,\n    Billing_Cycle: \"Monthly Cutoff 5\",\n    Notes: \"Second cycle no contact\",\n    Record_status: \"Active\",\n    Data_source: \"CRM_export_v2\",\n  },\n  {\n    Company_UUID: \"b3d2e1bb-2222-4b20-8c33-000000000003\",\n    Segment: \"Regular\",\n    Credit_Line_USD: \"\",\n    Collections_Channel: \"AI bot\",\n    Amount_Due_USD: 0,\n    DPD_days: null,\n    Billing_Cycle: \"Monthly Cutoff 12\",\n    Notes: \"Dispute under review\",\n    Record_status: \"Pending_review\",\n    Data_source: \"Manual_upload\",\n  },\n  //  >>>>>>>>>>>>>>>>>>>>>>>  ...ADD MORE ROWS ABOVE  <<<<<<<<<<<<<<<<<<<<<<<\n];\n\nreturn rows.map((row) => ({ json: row }));\n"
+      },
+      "id": "c3000000-0000-4000-8000-000000000002",
+      "name": "Raw Data (PASTE ROWS HERE)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === Stage 1 \u2014 Validation, normalisation & data-quality flagging ===\n// Runs ONCE for all rows so duplicate Company_UUIDs can be detected across the\n// whole batch. Emits the app's snake_case schema plus workable / needs_review\n// and the exact data_quality_flags the UI renders.\n\nconst items = $input.all();\n\n// Pass 1: count UUID occurrences for batch-level duplicate detection.\nconst uuidCounts = {};\nfor (const it of items) {\n  const u = it.json.Company_UUID;\n  if (u) uuidCounts[u] = (uuidCounts[u] || 0) + 1;\n}\n\n// DPD \u2192 bucket label (must match the app's DPD_BUCKET_ORDER exactly).\nfunction dpdBucket(dpd) {\n  if (dpd == null || isNaN(dpd) || dpd <= 0) return null;\n  if (dpd <= 30) return \"1-30\";\n  if (dpd <= 60) return \"31-60\";\n  if (dpd <= 90) return \"61-90\";\n  if (dpd <= 180) return \"91-180\";\n  if (dpd <= 365) return \"181-365\";\n  return \"365+\";\n}\n\nconst isMissing = (v) => v === null || v === undefined || v === \"\";\n\nconst results = [];\nfor (const it of items) {\n  const r = it.json;\n  const flags = [];\n\n  // Coerce numerics (exports deliver strings).\n  const amount = isMissing(r.Amount_Due_USD) ? null : Number(r.Amount_Due_USD);\n  const dpd = isMissing(r.DPD_days) ? null : Number(r.DPD_days);\n  const credit = isMissing(r.Credit_Line_USD) ? null : Number(r.Credit_Line_USD);\n  const status = (r.Record_status || \"\").toString().trim();\n\n  // Amount validity \u2192 precise flags.\n  const amountValid = amount != null && !isNaN(amount) && amount > 0;\n  if (amount == null || isNaN(amount)) flags.push(\"Missing amount\");\n  else if (amount <= 0) flags.push(\"Invalid amount (<=0)\");\n\n  // DPD validity \u2192 precise flags.\n  const dpdValid = dpd != null && !isNaN(dpd) && dpd > 0;\n  if (dpd == null || isNaN(dpd)) flags.push(\"Missing DPD\");\n  else if (dpd <= 0) flags.push(\"Invalid DPD (<=0)\");\n\n  if (credit == null || isNaN(credit)) flags.push(\"Missing credit line\");\n  if (dpdValid && dpd > 365) flags.push(\"Aged 365+ days\");\n  if (status === \"Pending_review\") flags.push(\"Pending review\");\n  if (r.Company_UUID && uuidCounts[r.Company_UUID] > 1) flags.push(\"Duplicate UUID\");\n\n  // Workable ONLY if amount + DPD valid AND account is Active.\n  const workable = amountValid && dpdValid && status === \"Active\";\n\n  results.push({\n    json: {\n      company_uuid: r.Company_UUID,\n      segment: r.Segment,\n      credit_line_usd: credit,\n      collections_channel: r.Collections_Channel,\n      amount_due_usd: amount, // coerced value (may be <=0 or null when flagged)\n      dpd_days: dpd,\n      dpd_bucket: dpdBucket(dpd),\n      billing_cycle: r.Billing_Cycle ?? \"\",\n      notes: r.Notes ?? \"\",\n      record_status: status,\n      data_source: r.Data_source,\n      workable,\n      needs_review: !workable,\n      data_quality_flags: flags,\n    },\n  });\n}\n\nreturn results;\n"
+      },
+      "id": "c3000000-0000-4000-8000-000000000003",
+      "name": "Stage 1 \u00b7 Validate & Flag",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === Stage 2 \u2014 Deterministic policy engine ===\n// Pure decision table. No LLM, no randomness: identical input \u2192 identical policy.\n// Rule strings match what the app displays verbatim.\n//\n// IMPORTANT business rule: the policy is computed whenever the FINANCIALS are\n// valid (amount > 0 AND DPD > 0), INDEPENDENT of `workable`. A Pending_review\n// account therefore keeps needs_review = true but still carries the policy that\n// WOULD apply once review clears. Only records with invalid/missing financials\n// get null policy fields. \"Full payment\" carries upfront_required_usd = 0 (the\n// whole balance is due, no partial-upfront arrangement); discounts carry 50%.\n\nconst items = $input.all();\nconst results = [];\n\nfor (const it of items) {\n  const r = it.json;\n  const amount = Number(r.amount_due_usd);\n  const dpd = Number(r.dpd_days);\n  const financialsValid =\n    r.amount_due_usd != null && !isNaN(amount) && amount > 0 &&\n    r.dpd_days != null && !isNaN(dpd) && dpd > 0;\n\n  if (!financialsValid) {\n    results.push({\n      json: {\n        ...r,\n        recommended_policy: null,\n        policy_rule_fired: null,\n        upfront_required_usd: null,\n      },\n    });\n    continue;\n  }\n\n  const half = Math.round(amount * 0.5 * 100) / 100;\n  let policy, rule, upfront;\n\n  if (dpd <= 30) {\n    if (amount < 10000) {\n      policy = \"Full payment, no discount\";\n      rule = \"DPD 1-30 & Amount < $10k\";\n      upfront = 0;\n    } else if (amount <= 50000) {\n      policy = \"Full payment, no discount\";\n      rule = \"DPD 1-30 & Amount $10k-$50k\";\n      upfront = 0;\n    } else {\n      policy = \"20% interest discount if 50% paid upfront\";\n      rule = \"DPD 1-30 & Amount > $50k\";\n      upfront = half;\n    }\n  } else {\n    // financialsValid guarantees dpd > 0, so this branch is strictly DPD > 30.\n    policy = \"40% interest discount if 50% paid upfront\";\n    rule = \"DPD > 30 (any amount)\";\n    upfront = half;\n  }\n\n  results.push({\n    json: {\n      ...r,\n      recommended_policy: policy,\n      policy_rule_fired: rule,\n      upfront_required_usd: upfront,\n    },\n  });\n}\n\nreturn results;\n"
+      },
+      "id": "c3000000-0000-4000-8000-000000000004",
+      "name": "Stage 2 \u00b7 Policy Engine (deterministic)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.workable }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "c3000000-0000-4000-8000-000000000005",
+      "name": "Route \u00b7 Workable?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        250
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "c3000000-0000-4000-8000-000000000006",
+      "name": "Workable \u2192 agent queue",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        170
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "c3000000-0000-4000-8000-000000000007",
+      "name": "Needs review \u2192 exceptions",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        330
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === Stage 3 \u2014 Assemble metadata summary + accounts (the app's CleanedData) ===\n// Runs once for all items. Produces exactly { metadata, accounts } so the output\n// can be served straight to the Collections Copilot app.\n\nconst accounts = $input.all().map((i) => i.json);\n\nconst workable = accounts.filter((a) => a.workable).length;\nconst pending = accounts.filter((a) => a.record_status === \"Pending_review\").length;\n\n// Duplicate UUIDs = distinct UUIDs that appear more than once.\nconst counts = {};\nfor (const a of accounts) counts[a.company_uuid] = (counts[a.company_uuid] || 0) + 1;\nconst duplicateUuids = Object.values(counts).filter((n) => n > 1).length;\n\n// Exposure = sum of valid amounts due.\nconst exposure = accounts.reduce((s, a) => {\n  const v = Number(a.amount_due_usd);\n  return s + (isNaN(v) || v <= 0 ? 0 : v);\n}, 0);\n\nconst output = {\n  metadata: {\n    generated_by: \"n8n cleaning pipeline\",\n    pipeline_version: \"1.0.0\",\n    total_records: accounts.length,\n    workable_records: workable,\n    needs_review_records: accounts.length - workable,\n    pending_review_records: pending,\n    duplicate_uuids_detected: duplicateUuids,\n    total_portfolio_exposure_usd: Math.round(exposure * 100) / 100,\n  },\n  accounts,\n};\n\n// Single item \u2014 inspect/copy from the output panel, or pipe to a Google Sheets /\n// HTTP Request / DB node to persist for the app to read.\nreturn [{ json: output }];\n"
+      },
+      "id": "c3000000-0000-4000-8000-000000000008",
+      "name": "Stage 3 \u00b7 Build metadata + accounts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        470
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger (daily in prod)": {
+      "main": [
+        [
+          {
+            "node": "Raw Data (PASTE ROWS HERE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Raw Data (PASTE ROWS HERE)": {
+      "main": [
+        [
+          {
+            "node": "Stage 1 \u00b7 Validate & Flag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stage 1 \u00b7 Validate & Flag": {
+      "main": [
+        [
+          {
+            "node": "Stage 2 \u00b7 Policy Engine (deterministic)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stage 2 \u00b7 Policy Engine (deterministic)": {
+      "main": [
+        [
+          {
+            "node": "Route \u00b7 Workable?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Stage 3 \u00b7 Build metadata + accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route \u00b7 Workable?": {
+      "main": [
+        [
+          {
+            "node": "Workable \u2192 agent queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Needs review \u2192 exceptions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
