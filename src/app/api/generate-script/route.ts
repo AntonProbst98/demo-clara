@@ -11,7 +11,9 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+// gemini-2.5-flash — has free-tier quota on this project (2.0-flash does not:
+// its free_tier request limit is 0, which returned 429 RESOURCE_EXHAUSTED).
+const GEMINI_MODEL = "gemini-2.5-flash";
 
 interface ScriptRequest {
   companyUuid: string;
