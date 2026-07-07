@@ -1,24 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Account } from "@/lib/types";
 import { usePromises } from "@/components/providers/PromisesProvider";
 import { formatUSDExact, formatDate } from "@/lib/format";
 import { promisesToCsv, downloadCsv } from "@/lib/csv";
 import { ZoneHeader } from "@/components/workspace/ZoneHeader";
 
+// Local yyyy-mm-dd for today, used to prevent back-dated due dates.
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+}
+
+// The amount the agent should collect, per the pre-computed policy. Prefer the
+// upfront figure the pipeline decided; fall back to the full balance.
+function prefillAmount(account: Account): string {
+  const v = account.upfront_required_usd ?? account.amount_due_usd;
+  return v != null ? String(v) : "";
+}
+
 export function PromiseZone({ account }: { account: Account }) {
   const { promises, addPromise, removePromise, promisesForAccount } =
     usePromises();
   const accountPromises = promisesForAccount(account.company_uuid);
 
-  const [amount, setAmount] = useState("");
+  const today = todayISO();
+  const [amount, setAmount] = useState(() => prefillAmount(account));
   const [dueDate, setDueDate] = useState("");
   const [note, setNote] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null);
+
+  // Auto-dismiss the success confirmation so it doesn't linger onto the next call.
+  useEffect(() => {
+    if (!confirm) return;
+    const t = setTimeout(() => setConfirm(null), 5000);
+    return () => clearTimeout(t);
+  }, [confirm]);
+
+  const parsedAmount = Number(amount);
+  // Non-blocking heads-up: promising more than the balance is unusual but allowed.
+  const overAmountDue =
+    amount.trim() !== "" &&
+    Number.isFinite(parsedAmount) &&
+    parsedAmount > account.amount_due_usd;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    setConfirm(null);
     const parsed = Number(amount);
     if (!parsed || parsed <= 0) {
       setErr("Enter a promise amount greater than zero.");
@@ -28,6 +60,10 @@ export function PromiseZone({ account }: { account: Account }) {
       setErr("Choose a due date.");
       return;
     }
+    if (dueDate < today) {
+      setErr("Due date can't be in the past.");
+      return;
+    }
     addPromise({
       accountUuid: account.company_uuid,
       amount: parsed,
@@ -35,10 +71,12 @@ export function PromiseZone({ account }: { account: Account }) {
       note: note.trim(),
       policyAtLog: account.recommended_policy,
     });
-    setAmount("");
+    setErr(null);
+    setConfirm(`Promise logged · ${formatUSDExact(parsed)} due ${formatDate(dueDate)}`);
+    // Reset for the next commitment, re-seeding the trusted amount.
+    setAmount(prefillAmount(account));
     setDueDate("");
     setNote("");
-    setErr(null);
   }
 
   const committedForAccount = accountPromises.reduce(
@@ -85,7 +123,16 @@ export function PromiseZone({ account }: { account: Account }) {
             placeholder="0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            aria-describedby={overAmountDue ? "promise-amount-warn" : undefined}
           />
+          {overAmountDue && (
+            <p
+              id="promise-amount-warn"
+              className="mt-1 text-[12px] text-[var(--warning)]"
+            >
+              Above amount due ({formatUSDExact(account.amount_due_usd)}).
+            </p>
+          )}
         </div>
         <div>
           <label className="label" htmlFor="promise-date">
@@ -96,6 +143,7 @@ export function PromiseZone({ account }: { account: Account }) {
             type="date"
             className="field mt-1.5 tnum"
             value={dueDate}
+            min={today}
             onChange={(e) => setDueDate(e.target.value)}
           />
         </div>
@@ -119,7 +167,19 @@ export function PromiseZone({ account }: { account: Account }) {
         </div>
       </form>
 
-      {err && <p className="mt-2 text-[13px] text-[var(--critical)]">{err}</p>}
+      <div role="status" aria-live="polite" className="min-h-[1.25rem]">
+        {err && (
+          <p className="mt-2 flex items-center gap-1.5 text-[13px] text-[var(--critical)]">
+            {err}
+          </p>
+        )}
+        {!err && confirm && (
+          <p className="mt-2 flex items-center gap-1.5 text-[13px] font-medium text-[var(--good)]">
+            <CheckIcon />
+            {confirm}
+          </p>
+        )}
+      </div>
 
       {/* Logged promises for this account */}
       <div className="mt-5 border-t border-[var(--line)] pt-4">
@@ -173,6 +233,24 @@ export function PromiseZone({ account }: { account: Account }) {
         )}
       </div>
     </section>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
   );
 }
 

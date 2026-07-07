@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Account } from "@/lib/types";
 import { formatUSDExact } from "@/lib/format";
 import { ZoneHeader } from "@/components/workspace/ZoneHeader";
@@ -55,6 +55,27 @@ export function RecommendationZone({ account }: { account: Account }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
+
+  // Keyboard bus: the Workspace fires `g` (generate) and `c` (copy) globally.
+  // Refs keep the handlers current without re-subscribing on every state change.
+  const genRef = useRef<() => void>(() => {});
+  const copyRef = useRef<() => void>(() => {});
+  genRef.current = () => {
+    if (!needsReview && !loading) generate();
+  };
+  copyRef.current = () => {
+    if (script) copy();
+  };
+  useEffect(() => {
+    const onGen = () => genRef.current();
+    const onCopy = () => copyRef.current();
+    window.addEventListener("ws:generate", onGen);
+    window.addEventListener("ws:copy", onCopy);
+    return () => {
+      window.removeEventListener("ws:generate", onGen);
+      window.removeEventListener("ws:copy", onCopy);
+    };
+  }, []);
 
   return (
     <section className="card p-5">
@@ -122,6 +143,7 @@ export function RecommendationZone({ account }: { account: Account }) {
                     <SparkIcon /> Generate script
                   </>
                 )}
+                {!loading && <kbd className="kbd ml-1">G</kbd>}
               </button>
             </div>
 
@@ -150,10 +172,13 @@ export function RecommendationZone({ account }: { account: Account }) {
                       : ""}
                   </span>
                   <button
-                    className="text-[12px] font-medium text-accent hover:underline"
+                    className="inline-flex items-center gap-1.5 text-[12px] font-medium text-accent"
                     onClick={copy}
                   >
-                    {copied ? "Copied" : "Copy"}
+                    <span className="hover:underline">
+                      {copied ? "Copied" : "Copy"}
+                    </span>
+                    <kbd className="kbd">C</kbd>
                   </button>
                 </div>
                 <p className="whitespace-pre-wrap px-4 py-4 text-[13px] leading-relaxed text-ink">

@@ -67,11 +67,10 @@ export function ClientDataZone({ account }: { account: Account }) {
         </DataField>
         <DataField label="Record status">{account.record_status}</DataField>
         <DataField label="Utilization" mono>
-          {account.credit_line_usd > 0
-            ? `${Math.round(
-                (account.amount_due_usd / account.credit_line_usd) * 100,
-              )}%`
-            : "—"}
+          <Utilization
+            amountDue={account.amount_due_usd}
+            creditLine={account.credit_line_usd}
+          />
         </DataField>
       </div>
 
@@ -101,6 +100,31 @@ export function ClientDataZone({ account }: { account: Account }) {
       )}
     </section>
   );
+}
+
+// Balance ÷ credit line. Over-limit (>100%) is legitimate for a delinquent
+// account, but a ratio this extreme means the credit-line figure itself is
+// implausible — don't show a number the agent can't trust; flag the data instead.
+function Utilization({
+  amountDue,
+  creditLine,
+}: {
+  amountDue: number;
+  creditLine: number;
+}) {
+  if (!(creditLine > 0)) return <>—</>;
+  const ratio = amountDue / creditLine;
+  if (ratio > 10) {
+    return (
+      <span
+        className="text-ink-muted"
+        title="Credit line looks implausible for this balance — verify upstream data"
+      >
+        —
+      </span>
+    );
+  }
+  return <>{Math.round(ratio * 100)}%</>;
 }
 
 function WarnIcon() {

@@ -66,13 +66,18 @@ export function AccountQueue({
         <div className="relative">
           <SearchIcon />
           <input
-            className="field pl-9"
+            id="queue-search"
+            aria-label="Search accounts by UUID, channel, or policy"
+            className="field pl-9 pr-9"
             placeholder="Search UUID, channel, policy…"
             value={filters.search}
             onChange={(e) =>
               onFiltersChange({ ...filters, search: e.target.value })
             }
           />
+          <kbd className="kbd pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2">
+            /
+          </kbd>
         </div>
 
         <FacetGroup label="Status">
