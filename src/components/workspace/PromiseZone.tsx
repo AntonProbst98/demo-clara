@@ -1,0 +1,214 @@
+"use client";
+
+import { useState } from "react";
+import type { Account } from "@/lib/types";
+import { usePromises } from "@/components/providers/PromisesProvider";
+import { formatUSDExact, formatDate } from "@/lib/format";
+import { promisesToCsv, downloadCsv } from "@/lib/csv";
+import { ZoneHeader } from "@/components/workspace/ZoneHeader";
+
+export function PromiseZone({ account }: { account: Account }) {
+  const { promises, addPromise, removePromise, promisesForAccount } =
+    usePromises();
+  const accountPromises = promisesForAccount(account.company_uuid);
+
+  const [amount, setAmount] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [note, setNote] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const parsed = Number(amount);
+    if (!parsed || parsed <= 0) {
+      setErr("Enter a promise amount greater than zero.");
+      return;
+    }
+    if (!dueDate) {
+      setErr("Choose a due date.");
+      return;
+    }
+    addPromise({
+      accountUuid: account.company_uuid,
+      amount: parsed,
+      dueDate,
+      note: note.trim(),
+      policyAtLog: account.recommended_policy,
+    });
+    setAmount("");
+    setDueDate("");
+    setNote("");
+    setErr(null);
+  }
+
+  const committedForAccount = accountPromises.reduce(
+    (s, p) => s + p.amount,
+    0,
+  );
+
+  return (
+    <section className="card p-5">
+      <ZoneHeader
+        index={3}
+        title="Log promise to pay"
+        trailing={
+          <button
+            className="btn btn-secondary h-8 px-3 text-[12px]"
+            onClick={() =>
+              downloadCsv(
+                "collections_promises.csv",
+                promisesToCsv(promises),
+              )
+            }
+            disabled={promises.length === 0}
+            title={
+              promises.length === 0
+                ? "No promises logged yet"
+                : "Export all promises across accounts"
+            }
+          >
+            <DownloadIcon />
+            Export all ({promises.length})
+          </button>
+        }
+      />
+
+      <form onSubmit={submit} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+        <div>
+          <label className="label" htmlFor="promise-amount">
+            Promise amount (USD)
+          </label>
+          <input
+            id="promise-amount"
+            className="field mt-1.5 tnum"
+            inputMode="decimal"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="label" htmlFor="promise-date">
+            Due date
+          </label>
+          <input
+            id="promise-date"
+            type="date"
+            className="field mt-1.5 tnum"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
+        </div>
+        <div className="flex items-end">
+          <button type="submit" className="btn btn-primary w-full sm:w-auto">
+            Log promise
+          </button>
+        </div>
+        <div className="sm:col-span-3">
+          <label className="label" htmlFor="promise-note">
+            Note (optional)
+          </label>
+          <textarea
+            id="promise-note"
+            className="field mt-1.5"
+            rows={2}
+            placeholder="Context for this commitment…"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </div>
+      </form>
+
+      {err && <p className="mt-2 text-[13px] text-[var(--critical)]">{err}</p>}
+
+      {/* Logged promises for this account */}
+      <div className="mt-5 border-t border-[var(--line)] pt-4">
+        <div className="flex items-center justify-between">
+          <span className="eyebrow">
+            Promises on this account · {accountPromises.length}
+          </span>
+          {accountPromises.length > 0 && (
+            <span className="tnum text-[12px] font-semibold text-ink">
+              {formatUSDExact(committedForAccount)} committed
+            </span>
+          )}
+        </div>
+
+        {accountPromises.length === 0 ? (
+          <p className="mt-3 text-[13px] text-ink-muted">
+            No promises logged for this account yet.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {accountPromises.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-center gap-3 rounded-[8px] border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2.5"
+              >
+                <div className="flex flex-col">
+                  <span className="tnum text-[14px] font-semibold text-ink">
+                    {formatUSDExact(p.amount)}
+                  </span>
+                  <span className="text-[12px] text-ink-muted">
+                    due {formatDate(p.dueDate)}
+                    {p.policyAtLog ? ` · ${p.policyAtLog}` : ""}
+                  </span>
+                </div>
+                {p.note && (
+                  <span className="ml-1 flex-1 truncate text-[12px] text-ink-secondary">
+                    {p.note}
+                  </span>
+                )}
+                <button
+                  className="ml-auto text-ink-muted transition-colors hover:text-[var(--critical)]"
+                  onClick={() => removePromise(p.id)}
+                  aria-label="Remove promise"
+                  title="Remove promise"
+                >
+                  <TrashIcon />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M12 15V3" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
