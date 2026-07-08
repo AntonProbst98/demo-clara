@@ -27,6 +27,11 @@ export function PromiseZone({ account }: { account: Account }) {
     usePromises();
   const accountPromises = promisesForAccount(account.company_uuid);
 
+  // Same gate as the recommendation zone: if the pipeline couldn't compute a
+  // policy (bad/missing data) or the account is flagged for review, there's no
+  // verified amount to commit against — block logging a promise here too.
+  const needsReview = account.needs_review || !account.recommended_policy;
+
   const today = todayISO();
   const [amount, setAmount] = useState(() => prefillAmount(account));
   const [dueDate, setDueDate] = useState("");
@@ -50,6 +55,7 @@ export function PromiseZone({ account }: { account: Account }) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (needsReview) return; // defense in depth — the form isn't rendered anyway
     setConfirm(null);
     const parsed = Number(amount);
     if (!parsed || parsed <= 0) {
@@ -111,6 +117,25 @@ export function PromiseZone({ account }: { account: Account }) {
         }
       />
 
+      {needsReview ? (
+        <div className="rounded-[10px] border border-[var(--warning)]/30 bg-[var(--warning-wash)] p-4">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 text-[var(--warning)]">
+              <WarnIcon />
+            </span>
+            <div>
+              <p className="text-[14px] font-semibold text-ink">
+                Can&apos;t log a promise — account in review
+              </p>
+              <p className="mt-1 text-[13px] text-ink-secondary">
+                No policy was computed for this account, so there is no verified
+                amount to commit against. Resolve the data-quality flags before
+                recording a promise to pay.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
       <form onSubmit={submit} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
         <div>
           <label className="label" htmlFor="promise-amount">
@@ -166,6 +191,7 @@ export function PromiseZone({ account }: { account: Account }) {
           />
         </div>
       </form>
+      )}
 
       <div role="status" aria-live="polite" className="min-h-[1.25rem]">
         {err && (
@@ -233,6 +259,26 @@ export function PromiseZone({ account }: { account: Account }) {
         )}
       </div>
     </section>
+  );
+}
+
+function WarnIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </svg>
   );
 }
 
