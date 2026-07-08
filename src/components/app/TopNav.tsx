@@ -7,6 +7,7 @@ import { usePromises } from "@/components/providers/PromisesProvider";
 const LINKS = [
   { href: "/workspace", label: "Workspace" },
   { href: "/dashboard", label: "Daily Progress" },
+  { href: "/import", label: "Import" },
 ];
 
 export function TopNav() {
