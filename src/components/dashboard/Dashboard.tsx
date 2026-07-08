@@ -14,14 +14,14 @@ import { HBarChart } from "@/components/dashboard/charts";
 
 interface Props {
   metadata: PortfolioMetadata;
-  channelExposure: CountBucket[];
+  policyExposure: CountBucket[];
   dpdBuckets: CountBucket[];
   accountCount: number;
 }
 
 export function Dashboard({
   metadata,
-  channelExposure,
+  policyExposure,
   dpdBuckets,
   accountCount,
 }: Props) {
@@ -39,12 +39,12 @@ export function Dashboard({
             Daily progress
           </h1>
           <p className="mt-1 text-[13px] text-ink-secondary">
-            Collection activity for today and the health of the portfolio behind
+            Today&apos;s collection activity and the health of the book behind
             it.
           </p>
         </div>
         <span className="text-[12px] text-ink-muted">
-          Portfolio · {formatNumber(accountCount)} accounts loaded
+          Internal collections · {formatNumber(accountCount)} accounts
         </span>
       </div>
 
@@ -89,7 +89,7 @@ export function Dashboard({
 
         <Card
           title="Data quality"
-          subtitle="From the upstream cleaning pipeline"
+          subtitle="Quality of your queue · upstream cleaning pipeline"
         >
           <div className="grid grid-cols-2 gap-x-6 gap-y-4 pt-1">
             <QualityStat
@@ -132,8 +132,8 @@ export function Dashboard({
         </Card>
       </div>
 
-      {/* Portfolio overview */}
-      <Section eyebrow="Portfolio overview" className="mt-8">
+      {/* Book overview */}
+      <Section eyebrow="Your book" className="mt-8">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <StatTile
             label="Total exposure"
@@ -145,11 +145,11 @@ export function Dashboard({
           />
           <div className="lg:col-span-2">
             <Card
-              title="Exposure by channel"
-              subtitle="Sum of amount due, by collections channel"
+              title="Exposure by policy"
+              subtitle="Amount due by recommended policy lever"
               flush
             >
-              <HBarChart data={channelExposure} metric="amount" />
+              <HBarChart data={policyExposure} metric="amount" />
             </Card>
           </div>
         </div>

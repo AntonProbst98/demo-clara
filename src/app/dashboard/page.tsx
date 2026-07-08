@@ -1,5 +1,5 @@
 import { loadCleanedData } from "@/lib/data";
-import { exposureByChannel, dpdDistribution } from "@/lib/metrics";
+import { exposureByPolicy, dpdDistribution } from "@/lib/metrics";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 
 // Aggregates are recomputed from the data file on every request.
@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   return (
     <Dashboard
       metadata={metadata}
-      channelExposure={exposureByChannel(accounts)}
+      policyExposure={exposureByPolicy(accounts)}
       dpdBuckets={dpdDistribution(accounts)}
       accountCount={accounts.length}
     />

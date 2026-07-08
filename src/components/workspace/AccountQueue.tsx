@@ -31,10 +31,6 @@ export function AccountQueue({
   onSelect,
   contactedUuids,
 }: Props) {
-  const channelCounts = useMemo(
-    () => facetCounts(accounts, "collections_channel"),
-    [accounts],
-  );
   const segmentCounts = useMemo(
     () => facetCounts(accounts, "segment"),
     [accounts],
@@ -56,7 +52,6 @@ export function AccountQueue({
       : [...list, value];
   }
 
-  const channels = [...channelCounts.keys()].sort();
   const buckets = DPD_BUCKET_ORDER.filter((b) => bucketCounts.has(b));
 
   return (
@@ -67,9 +62,9 @@ export function AccountQueue({
           <SearchIcon />
           <input
             id="queue-search"
-            aria-label="Search accounts by UUID, channel, or policy"
+            aria-label="Search accounts by UUID or policy"
             className="field pl-9 pr-9"
-            placeholder="Search UUID, channel, policy…"
+            placeholder="Search UUID, policy…"
             value={filters.search}
             onChange={(e) =>
               onFiltersChange({ ...filters, search: e.target.value })
@@ -128,24 +123,6 @@ export function AccountQueue({
           ))}
         </FacetGroup>
 
-        <FacetGroup label="Channel">
-          {channels.map((c) => (
-            <Chip
-              key={c}
-              active={filters.channels.includes(c)}
-              count={channelCounts.get(c) ?? 0}
-              onClick={() =>
-                onFiltersChange({
-                  ...filters,
-                  channels: toggle(filters.channels, c),
-                })
-              }
-            >
-              {c}
-            </Chip>
-          ))}
-        </FacetGroup>
-
         <FacetGroup label="DPD bucket">
           {buckets.map((b) => (
             <Chip
@@ -176,7 +153,6 @@ export function AccountQueue({
             onClick={() =>
               onFiltersChange({
                 search: "",
-                channels: [],
                 segments: [],
                 buckets: [],
                 status: "all",
@@ -223,7 +199,6 @@ function setStatus(
 function isFiltered(f: QueueFilters): boolean {
   return (
     f.search !== "" ||
-    f.channels.length > 0 ||
     f.segments.length > 0 ||
     f.buckets.length > 0 ||
     f.status !== "all"
@@ -271,7 +246,7 @@ function QueueRow({
         </div>
         <div className="mt-1 flex items-center gap-2">
           <span className="text-[12px] text-ink-muted">
-            {account.collections_channel}
+            {account.dpd_bucket ? `${account.dpd_bucket} days` : "DPD n/a"}
           </span>
           {contacted && (
             <span className="ml-auto inline-flex items-center gap-1 text-[12px] font-medium text-[var(--good)]">

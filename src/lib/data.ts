@@ -3,10 +3,19 @@ import { promises as fs } from "fs";
 import path from "path";
 import type { CleanedData } from "./types";
 
-// Server-side loader. Reads the cleaned dataset from data/cleaned_accounts.json.
-// This runs only on the server (never shipped to the client); the file is read
-// fresh so replacing the JSON is picked up without touching code.
-const DATA_PATH = path.join(process.cwd(), "data", "cleaned_accounts.json");
+// Server-side loader. Reads the Internal Collections book — the app is that
+// team's tool, so it consumes ONLY the accounts routed to their channel, never
+// the full portfolio. That narrowing is an explicit, documented pipeline stage,
+// not a filter hidden here: `Route · Channel` in collections_pipeline_n8n.json,
+// mirrored by the repo script `npm run data:internal`, which reads the full
+// cleaned export and writes this already-scoped file:
+//
+//   cleaned_accounts.json (all channels)
+//     → Route · Channel  →  internal_accounts.json  →  this loader  →  the app
+//
+// Runs only on the server (never shipped to the client); read fresh so a
+// regenerated file is picked up without touching code.
+const DATA_PATH = path.join(process.cwd(), "data", "internal_accounts.json");
 
 export async function loadCleanedData(): Promise<CleanedData> {
   try {
@@ -19,7 +28,7 @@ export async function loadCleanedData(): Promise<CleanedData> {
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(
-        `Data file not found at ${DATA_PATH}. Place cleaned_accounts.json in the data/ folder (see README).`,
+        `Data file not found at ${DATA_PATH}. Generate it with \`npm run data:internal\` (routes cleaned_accounts.json to the Internal collections book).`,
       );
     }
     throw err;

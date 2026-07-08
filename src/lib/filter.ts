@@ -4,7 +4,6 @@ export type StatusFilter = "all" | "workable" | "needs_review";
 
 export interface QueueFilters {
   search: string;
-  channels: string[];
   segments: string[];
   buckets: string[];
   status: StatusFilter;
@@ -12,7 +11,6 @@ export interface QueueFilters {
 
 export const EMPTY_FILTERS: QueueFilters = {
   search: "",
-  channels: [],
   segments: [],
   buckets: [],
   status: "all",
@@ -27,9 +25,6 @@ function matchesStatus(a: Account, status: StatusFilter): boolean {
 /** Pure predicate — a single account against the active filters. */
 export function accountMatches(a: Account, f: QueueFilters): boolean {
   if (!matchesStatus(a, f.status)) return false;
-  if (f.channels.length && !f.channels.includes(a.collections_channel)) {
-    return false;
-  }
   if (f.segments.length && !f.segments.includes(a.segment)) return false;
   if (f.buckets.length && !f.buckets.includes(a.dpd_bucket)) return false;
   if (f.search.trim()) {

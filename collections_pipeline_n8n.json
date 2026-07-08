@@ -69,8 +69,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        1120,
-        250
+        1560,
+        220
       ]
     },
     {
@@ -80,8 +80,8 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        1340,
-        170
+        1780,
+        140
       ]
     },
     {
@@ -91,8 +91,8 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        1340,
-        330
+        1780,
+        300
       ]
     },
     {
@@ -100,12 +100,45 @@
         "jsCode": "// === Stage 3 \u2014 Assemble metadata summary + accounts (the app's CleanedData) ===\n// Runs once for all items. Produces exactly { metadata, accounts } so the output\n// can be served straight to the Collections Copilot app.\n\nconst accounts = $input.all().map((i) => i.json);\n\nconst workable = accounts.filter((a) => a.workable).length;\nconst pending = accounts.filter((a) => a.record_status === \"Pending_review\").length;\n\n// Duplicate UUIDs = distinct UUIDs that appear more than once.\nconst counts = {};\nfor (const a of accounts) counts[a.company_uuid] = (counts[a.company_uuid] || 0) + 1;\nconst duplicateUuids = Object.values(counts).filter((n) => n > 1).length;\n\n// Exposure = sum of valid amounts due.\nconst exposure = accounts.reduce((s, a) => {\n  const v = Number(a.amount_due_usd);\n  return s + (isNaN(v) || v <= 0 ? 0 : v);\n}, 0);\n\nconst output = {\n  metadata: {\n    generated_by: \"n8n cleaning pipeline\",\n    pipeline_version: \"1.0.0\",\n    total_records: accounts.length,\n    workable_records: workable,\n    needs_review_records: accounts.length - workable,\n    pending_review_records: pending,\n    duplicate_uuids_detected: duplicateUuids,\n    total_portfolio_exposure_usd: Math.round(exposure * 100) / 100,\n  },\n  accounts,\n};\n\n// Single item \u2014 inspect/copy from the output panel, or pipe to a Google Sheets /\n// HTTP Request / DB node to persist for the app to read.\nreturn [{ json: output }];\n"
       },
       "id": "c3000000-0000-4000-8000-000000000008",
-      "name": "Stage 3 \u00b7 Build metadata + accounts",
+      "name": "Stage 3 \u00b7 Build INTERNAL book (metadata + accounts)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
-        470
+        1320,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.collections_channel === 'Internal collections' }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "c3000000-0000-4000-8000-000000000009",
+      "name": "Route \u00b7 Channel (Internal collections?)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "notesInFlow": true,
+      "notes": "This tool serves the Internal Collections team. ONLY their channel continues to the app; other channels are worked by external agencies / bureau / AI bot and drop out of scope here. Code twin of this routing: `npm run data:internal`, which writes data/internal_accounts.json.",
+      "position": [
+        1100,
+        340
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "c3000000-0000-4000-8000-000000000010",
+      "name": "Other channels \u2192 external agencies / bureau / AI bot (out of scope)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        500
       ]
     }
   ],
@@ -147,12 +180,30 @@
       "main": [
         [
           {
+            "node": "Route \u00b7 Channel (Internal collections?)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route \u00b7 Channel (Internal collections?)": {
+      "main": [
+        [
+          {
             "node": "Route \u00b7 Workable?",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Stage 3 \u00b7 Build metadata + accounts",
+            "node": "Stage 3 \u00b7 Build INTERNAL book (metadata + accounts)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Other channels \u2192 external agencies / bureau / AI bot (out of scope)",
             "type": "main",
             "index": 0
           }

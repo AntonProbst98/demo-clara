@@ -20,14 +20,19 @@ export interface CountBucket {
   amount?: number;
 }
 
-/** Exposure (sum of amount_due) grouped by collections channel. */
-export function exposureByChannel(accounts: Account[]): CountBucket[] {
+/**
+ * Exposure (sum of amount_due) grouped by recommended policy lever. The book is
+ * a single channel (Internal collections), so channel breakdown is meaningless
+ * here; what the analyst prioritises by is which negotiation lever applies.
+ */
+export function exposureByPolicy(accounts: Account[]): CountBucket[] {
   const map = new Map<string, { count: number; amount: number }>();
   for (const a of accounts) {
-    const cur = map.get(a.collections_channel) ?? { count: 0, amount: 0 };
+    const key = a.recommended_policy ?? "Needs review";
+    const cur = map.get(key) ?? { count: 0, amount: 0 };
     cur.count += 1;
-    cur.amount += a.amount_due_usd;
-    map.set(a.collections_channel, cur);
+    cur.amount += a.amount_due_usd ?? 0;
+    map.set(key, cur);
   }
   return [...map.entries()]
     .map(([key, v]) => ({ key, label: key, value: v.count, amount: v.amount }))
