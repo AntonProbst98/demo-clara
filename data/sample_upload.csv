@@ -1,0 +1,11 @@
+Company_UUID,Segment,Credit_Line_USD,Collections_Channel,Amount_Due_USD,DPD_days,Billing_Cycle,Notes,Record_status,Data_source
+11111111-aaaa-4000-8000-000000000001,FPD,50,Internal collections,128105.34,30,Monthly Cutoff 19,,Active,CRM_export_v2
+22222222-aaaa-4000-8000-000000000002,Regular,80000,Internal collections,8000,45,Monthly Cutoff 8,Promised callback,Active,CRM_export_v2
+33333333-aaaa-4000-8000-000000000003,FPD,15000,Internal collections,5000,10,Monthly Cutoff 3,,Active,CRM_export_v2
+44444444-aaaa-4000-8000-000000000004,Regular,40000,Internal collections,20000,20,Monthly Cutoff 21,Awaiting docs,Pending_review,Manual_upload
+55555555-aaaa-4000-8000-000000000005,Regular,90000,Internal collections,60000,400,Monthly Cutoff 12,"Aged, escalate",Active,CRM_export_v2
+66666666-aaaa-4000-8000-000000000006,Regular,30000,Internal collections,0,5,Monthly Cutoff 7,Amount missing,Active,CRM_export_v2
+77777777-aaaa-4000-8000-000000000007,Regular,120000,External agency 1,9299.73,359,Monthly Cutoff 5,Second cycle no contact,Active,CRM_export_v2
+88888888-aaaa-4000-8000-000000000008,Regular,,AI bot,0,,Monthly Cutoff 12,"Dispute, under review",Pending_review,Manual_upload
+99999999-aaaa-4000-8000-000000000009,FPD,25000,Internal collections,14500,28,Monthly Cutoff 9,,Active,CRM_export_v2
+99999999-aaaa-4000-8000-000000000009,FPD,25000,Internal collections,14500,120,Monthly Cutoff 9,Duplicate record,Active,CRM_export_v2
