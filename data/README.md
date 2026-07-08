@@ -8,13 +8,14 @@ There are two ways the app's data source (`internal_accounts.json`) gets built.
 
 ## 1. Live ingest — CSV upload → n8n webhook (the connected path)
 
-The `/import` page is the front door. An agent drops a raw CSV; the app hands it
-to a **live n8n webhook** that cleans, validates, policy-scores and routes it,
-then persists the returned Internal collections book.
+The `/import` page is the front door. An agent drops a raw **CSV or Excel
+(.xlsx)** export; the app parses the file format and hands the rows to a **live
+n8n webhook** that cleans, validates, policy-scores and routes them, then
+persists the returned Internal collections book.
 
 ```
-/import (drop CSV)
-   → POST /api/ingest            app parses CSV → rows
+/import (drop CSV or .xlsx)
+   → POST /api/ingest            app parses CSV/XLSX → rows
       → n8n Webhook (Production URL, N8N_INGEST_WEBHOOK_URL)
            Stage 1 Validate → Stage 2 Policy → Route · Channel → Stage 3 Assemble
         → Respond to Webhook   { metadata, accounts }  (internal book only)

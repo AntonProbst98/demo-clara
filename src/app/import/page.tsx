@@ -72,9 +72,9 @@ export default function ImportPage() {
           Import collections export
         </h1>
         <p className="mt-1 text-[13px] text-ink-secondary">
-          Drop a raw CSV. It&apos;s cleaned, validated, policy-scored and routed to
-          the Internal collections book by the live n8n pipeline, then loaded into
-          the workspace.
+          Drop a raw CSV or Excel (.xlsx) export. It&apos;s cleaned, validated,
+          policy-scored and routed to the Internal collections book by the live
+          n8n pipeline, then loaded into the workspace.
         </p>
       </div>
 
@@ -97,7 +97,7 @@ export default function ImportPage() {
         <UploadIcon />
         <div>
           <p className="text-[14px] font-medium text-ink">
-            {file ? file.name : "Drag a .csv here, or"}{" "}
+            {file ? file.name : "Drag a .csv or .xlsx here, or"}{" "}
             {!file && (
               <button
                 className="text-accent hover:underline"
@@ -116,7 +116,7 @@ export default function ImportPage() {
         <input
           ref={inputRef}
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,text/csv,.xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           className="hidden"
           onChange={(e) => pick(e.target.files?.[0] ?? null)}
         />

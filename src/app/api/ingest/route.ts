@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { writeFile } from "fs/promises";
 import path from "path";
 import { parseCsv, runInternalPipeline, type RawRow } from "@/lib/pipeline";
+import { parseXlsx } from "@/lib/xlsx";
 import type { CleanedData } from "@/lib/types";
 
 // POST /api/ingest
@@ -29,23 +30,37 @@ function isCleanedData(v: unknown): v is CleanedData {
   );
 }
 
-// Pull the CSV text out of whatever the client sent: multipart file upload,
-// a raw text/csv body, or JSON { csv }.
-async function readCsv(request: Request): Promise<string> {
+function looksXlsx(name: string, type: string): boolean {
+  const n = name.toLowerCase();
+  return (
+    n.endsWith(".xlsx") ||
+    n.endsWith(".xlsm") ||
+    type.includes("spreadsheetml") // openxmlformats…spreadsheetml.sheet
+  );
+}
+
+// Turn whatever the client sent into raw rows. Handles an Excel (.xlsx) or CSV
+// file upload, a raw text/csv body, or JSON { csv }. The file FORMAT is parsed
+// here; the actual cleaning still happens downstream (n8n, or the fallback).
+async function readRows(request: Request): Promise<RawRow[]> {
   const ctype = request.headers.get("content-type") ?? "";
   if (ctype.includes("multipart/form-data")) {
     const form = await request.formData();
     const file = form.get("file");
-    if (file && typeof file !== "string") return await file.text();
+    if (file && typeof file !== "string") {
+      if (looksXlsx(file.name ?? "", file.type ?? "")) {
+        return parseXlsx(Buffer.from(await file.arrayBuffer()));
+      }
+      return parseCsv(await file.text());
+    }
     const csv = form.get("csv");
-    if (typeof csv === "string") return csv;
-    return "";
+    return typeof csv === "string" ? parseCsv(csv) : [];
   }
   if (ctype.includes("application/json")) {
     const body = (await request.json()) as { csv?: string };
-    return body.csv ?? "";
+    return parseCsv(body.csv ?? "");
   }
-  return await request.text();
+  return parseCsv(await request.text());
 }
 
 // Forward parsed rows to the live n8n webhook and validate the response shape.
@@ -74,17 +89,19 @@ async function cleanViaN8n(
 }
 
 export async function POST(request: Request) {
-  let csv: string;
+  let rows: RawRow[];
   try {
-    csv = await readCsv(request);
-  } catch {
-    return NextResponse.json({ error: "Could not read the upload." }, { status: 400 });
+    rows = await readRows(request);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Could not read the upload." },
+      { status: 400 },
+    );
   }
 
-  const rows = parseCsv(csv);
   if (rows.length === 0) {
     return NextResponse.json(
-      { error: "No rows found. Expected a CSV with a header row and the raw export columns." },
+      { error: "No rows found. Expected a CSV or .xlsx with a header row and the raw export columns." },
       { status: 400 },
     );
   }

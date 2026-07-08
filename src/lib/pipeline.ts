@@ -246,18 +246,28 @@ export function parseCsv(text: string): RawRow[] {
   // trailing field/record (file may not end in newline)
   if (field !== "" || record.length > 0) pushRecord();
 
-  if (rows.length === 0) return [];
+  return matrixToRows(rows);
+}
 
-  const header = rows[0].map((h) => h.trim());
+/**
+ * Turn a raw cell matrix (row 0 = header) into RawRow objects keyed by column
+ * name. Shared by the CSV and XLSX parsers so both produce the identical shape.
+ */
+export function matrixToRows(matrix: string[][]): RawRow[] {
+  if (matrix.length === 0) return [];
+  const header = matrix[0].map((h) => (h ?? "").trim());
   const out: RawRow[] = [];
-  for (let r = 1; r < rows.length; r++) {
-    const cells = rows[r];
-    // skip fully-empty lines
-    if (cells.length === 1 && cells[0].trim() === "") continue;
+  for (let r = 1; r < matrix.length; r++) {
+    const cells = matrix[r];
+    // skip fully-empty rows
+    if (!cells || cells.every((c) => (c ?? "").toString().trim() === "")) {
+      continue;
+    }
     const obj: RawRow = {};
     header.forEach((key, idx) => {
+      if (!key) return;
       const raw = cells[idx];
-      obj[key] = raw === undefined ? "" : raw.trim();
+      obj[key] = raw === undefined || raw === null ? "" : String(raw).trim();
     });
     out.push(obj);
   }
