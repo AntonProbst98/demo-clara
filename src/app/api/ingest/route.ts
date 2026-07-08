@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
+import { writeFile, mkdir, rename } from "fs/promises";
 import path from "path";
 import { parseCsv, runInternalPipeline, type RawRow } from "@/lib/pipeline";
 import { parseXlsx } from "@/lib/xlsx";
@@ -19,7 +19,8 @@ import type { CleanedData } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-const DATA_PATH = path.join(process.cwd(), "data", "internal_accounts.json");
+const DATA_DIR = path.join(process.cwd(), "data");
+const DATA_PATH = path.join(DATA_DIR, "internal_accounts.json");
 
 function isCleanedData(v: unknown): v is CleanedData {
   return (
@@ -126,13 +127,22 @@ export async function POST(request: Request) {
     reason = "N8N_INGEST_WEBHOOK_URL not set";
   }
 
+  // Atomic write: ensure the dir exists, write a temp file, then rename over the
+  // target so a reader never sees a half-written file. The detailed error (code
+  // + resolved path) is surfaced so a persist failure is diagnosable, not opaque.
   try {
-    await writeFile(DATA_PATH, JSON.stringify(cleaned, null, 2) + "\n", "utf-8");
+    await mkdir(DATA_DIR, { recursive: true });
+    const tmp = `${DATA_PATH}.tmp`;
+    await writeFile(tmp, JSON.stringify(cleaned, null, 2) + "\n", "utf-8");
+    await rename(tmp, DATA_PATH);
   } catch (err) {
+    const e = err as NodeJS.ErrnoException;
     return NextResponse.json(
       {
         error: "Cleaned the data but could not persist it.",
-        detail: err instanceof Error ? err.message : String(err),
+        detail: `${e.code ? e.code + ": " : ""}${e.message ?? String(err)}`,
+        path: DATA_PATH,
+        source,
       },
       { status: 500 },
     );

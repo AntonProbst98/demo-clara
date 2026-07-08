@@ -54,7 +54,10 @@ export default function ImportPage() {
       const res = await fetch("/api/ingest", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        throw new Error(data.error ?? "Ingest failed.");
+        const parts = [data.error ?? "Ingest failed."];
+        if (data.detail) parts.push(data.detail);
+        if (data.path) parts.push(`path: ${data.path}`);
+        throw new Error(parts.join(" — "));
       }
       setResult(data as IngestResult);
       setStatus("done");
