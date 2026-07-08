@@ -77,7 +77,11 @@ function buildPrompt(req: ScriptRequest): string {
     `- Cumplimiento normativo: sin amenazas, sin lenguaje coercitivo, sin mencionar consecuencias legales.`,
     `- Debe guiar naturalmente hacia un COMPROMISO DE PAGO con una fecha concreta.`,
     `- Menciona la política recomendada y, si aplica, el pago inicial.`,
-    `- Conciso: 5 a 7 párrafos cortos. Devuelve SOLO el texto del guion, sin encabezados ni notas.`,
+    `- NO uses corchetes ni marcadores como [Nombre], [Su Nombre] o [Fecha]. Escribe un guion COMPLETO y listo para leer tal cual.`,
+    `- El agente se presenta únicamente como parte del "equipo de cobranza de Clara" (no inventes un nombre propio).`,
+    `- Dirígete al cliente de forma profesional sin inventar su nombre (p. ej. "estimado cliente" o refiriéndote a su empresa).`,
+    `- Conciso: 5 a 7 párrafos cortos. Termina el guion completo, sin cortarte a media frase.`,
+    `- Devuelve SOLO el texto del guion, sin encabezados, títulos ni notas.`,
   ].join("\n");
 }
 
@@ -122,7 +126,15 @@ export async function POST(request: Request) {
       signal: controller.signal,
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: buildPrompt(body) }] }],
-        generationConfig: { temperature: 0.6, maxOutputTokens: 700 },
+        generationConfig: {
+          temperature: 0.6,
+          maxOutputTokens: 1200,
+          // gemini-2.5-flash enables "thinking" by default, and those tokens
+          // count against maxOutputTokens — which was truncating the script
+          // mid-sentence. The script needs no reasoning, so disable thinking and
+          // spend the whole budget on the visible text.
+          thinkingConfig: { thinkingBudget: 0 },
+        },
       }),
     });
     clearTimeout(timeout);
