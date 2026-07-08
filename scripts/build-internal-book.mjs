@@ -1,7 +1,7 @@
 // === Route · Channel — build the Internal Collections book (code twin of n8n) ===
 //
 // This is the reproducible, code twin of the `Route · Channel` node in
-// collections_pipeline_n8n.json. It takes the full cleaned export
+// collections_ingest_webhook_n8n.json. It takes the full cleaned export
 // (data/cleaned_accounts.json — every collections channel) and narrows it to
 // ONLY the accounts the Internal Collections team works, then recomputes the
 // metadata summary over that scoped book and writes data/internal_accounts.json.

@@ -7,7 +7,7 @@ import { loadStoredBook } from "./store";
 // Server-side loader for the Internal Collections book — the app is that team's
 // tool, so it consumes ONLY the accounts routed to their channel, never the full
 // portfolio. That narrowing is an explicit, documented pipeline stage, not a
-// filter hidden here: `Route · Channel` in collections_pipeline_n8n.json,
+// filter hidden here: `Route · Channel` in collections_ingest_webhook_n8n.json,
 // mirrored by `npm run data:internal`.
 //
 //   cleaned_accounts.json (all channels)

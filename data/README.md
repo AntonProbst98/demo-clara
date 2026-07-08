@@ -66,7 +66,6 @@ External Bureau of Credit, AI bot) and states the team decided to focus on the
 agencies / bureau / the AI bot and are out of scope for this tool. The scoped
 book still exercises all three policy levers and both segments.
 
-The `Route · Channel` node (in both `collections_pipeline_n8n.json` and
-`collections_ingest_webhook_n8n.json`), `scripts/build-internal-book.mjs`, and
-`src/lib/pipeline.ts` are four representations of the **same** routing step — keep
-them in sync.
+The `Route · Channel` node (in `collections_ingest_webhook_n8n.json`),
+`scripts/build-internal-book.mjs`, and `src/lib/pipeline.ts` are three
+representations of the **same** routing step — keep them in sync.

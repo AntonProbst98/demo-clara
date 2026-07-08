@@ -1,4 +1,4 @@
-// === Cleaning pipeline — the code twin of collections_pipeline_n8n.json ===
+// === Cleaning pipeline — the code twin of collections_ingest_webhook_n8n.json ===
 //
 // This runs the EXACT same stages the n8n workflow runs, in TypeScript, so the
 // app can clean a raw CSV locally when the live n8n webhook is unreachable. The
