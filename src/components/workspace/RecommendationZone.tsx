@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Account } from "@/lib/types";
+import { describeFlag } from "@/lib/account";
 import { formatUSDExact } from "@/lib/format";
 import { ZoneHeader } from "@/components/workspace/ZoneHeader";
 
@@ -213,7 +214,7 @@ function ReviewNotice({ account }: { account: Account }) {
               account.data_quality_flags.map((flag) => (
                 <span key={flag} className="flag-chip">
                   <WarnIcon />
-                  {flag}
+                  {describeFlag(flag, account)}
                 </span>
               ))
             ) : (

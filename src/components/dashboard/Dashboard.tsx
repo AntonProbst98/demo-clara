@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { PortfolioMetadata } from "@/lib/types";
 import {
   type CountBucket,
+  type BookStats,
   promisesByPolicy,
   summarizePromises,
 } from "@/lib/metrics";
@@ -14,16 +15,16 @@ import { HBarChart } from "@/components/dashboard/charts";
 
 interface Props {
   metadata: PortfolioMetadata;
+  book: BookStats;
   policyExposure: CountBucket[];
   dpdBuckets: CountBucket[];
-  accountCount: number;
 }
 
 export function Dashboard({
   metadata,
+  book,
   policyExposure,
   dpdBuckets,
-  accountCount,
 }: Props) {
   const { promises } = usePromises();
 
@@ -44,7 +45,8 @@ export function Dashboard({
           </p>
         </div>
         <span className="text-[12px] text-ink-muted">
-          Internal collections · {formatNumber(accountCount)} accounts
+          Internal collections · {formatNumber(book.actionable)} actionable ·{" "}
+          {formatNumber(book.assigned)} assigned
         </span>
       </div>
 
@@ -55,8 +57,8 @@ export function Dashboard({
             label="Accounts contacted"
             value={formatNumber(summary.accountsContacted)}
             sub={`${
-              accountCount > 0
-                ? Math.round((summary.accountsContacted / accountCount) * 100)
+              book.assigned > 0
+                ? Math.round((summary.accountsContacted / book.assigned) * 100)
                 : 0
             }% of loaded accounts`}
             hero
@@ -118,8 +120,9 @@ export function Dashboard({
               }
             />
             <QualityStat
-              label="Pipeline version"
-              value={metadata.pipeline_version ?? "—"}
+              label="Actionable"
+              value={formatNumber(book.actionable)}
+              tone="good"
             />
           </div>
           <div className="mt-4 border-t border-[var(--line)] pt-3">
@@ -136,11 +139,11 @@ export function Dashboard({
       <Section eyebrow="Your book" className="mt-8">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <StatTile
-            label="Total exposure"
-            value={formatUSDCompact(metadata.total_portfolio_exposure_usd)}
-            sub={`${formatUSD(
-              metadata.total_portfolio_exposure_usd,
-            )} across ${formatNumber(accountCount)} accounts`}
+            label="Collectible exposure"
+            value={formatUSDCompact(book.collectibleExposure)}
+            sub={`${formatNumber(book.actionable)} actionable · ${formatUSDCompact(
+              book.assignedExposure,
+            )} assigned · ${formatNumber(book.flagged)} in review`}
             hero
           />
           <div className="lg:col-span-2">

@@ -1,7 +1,7 @@
 "use client";
 
 import type { Account } from "@/lib/types";
-import { dpdTone, segmentTone } from "@/lib/account";
+import { dpdTone, segmentTone, describeFlag } from "@/lib/account";
 import { formatUSD, formatUSDExact } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
 import { DataField } from "@/components/ui/Field";
@@ -92,7 +92,7 @@ export function ClientDataZone({ account }: { account: Account }) {
             {account.data_quality_flags.map((flag) => (
               <span key={flag} className="flag-chip">
                 <WarnIcon />
-                {flag}
+                {describeFlag(flag, account)}
               </span>
             ))}
           </div>

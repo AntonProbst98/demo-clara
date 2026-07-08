@@ -22,3 +22,19 @@ export function recommendationState(account: Account): "recommended" | "review" 
     ? "recommended"
     : "review";
 }
+
+/**
+ * Human-readable data-quality flag. The pipeline emits a single "Invalid DPD
+ * (<=0)" for both negative and zero DPD; split it at display time (keyed on the
+ * account's actual value) so a negative DPD reads self-explanatory on screen —
+ * e.g. a payment posted with a future/miscaptured date rather than a real delay.
+ */
+export function describeFlag(flag: string, account: Account): string {
+  if (flag === "Invalid DPD (<=0)") {
+    if (account.dpd_days != null && account.dpd_days < 0) {
+      return `Invalid DPD (negative: ${account.dpd_days})`;
+    }
+    return "Invalid DPD (zero)";
+  }
+  return flag;
+}

@@ -35,6 +35,13 @@ export function Workspace({
     [promises],
   );
 
+  // Actionable = the deterministic engine computed a policy (valid financials).
+  // This is the book size the Part-1 analysis leads with; the rest are in review.
+  const actionable = useMemo(
+    () => accounts.filter((a) => a.recommended_policy != null).length,
+    [accounts],
+  );
+
   // Resolve the selected account against the current filtered list. If the
   // selection dropped out of the filter, fall back to the first visible row.
   const selectedIndex = filtered.findIndex((a) => keyOf(a) === selectedKey);
@@ -170,7 +177,7 @@ export function Workspace({
                 <span className="tnum text-[12px] text-ink-muted">
                   {filtered.length ? effectiveIndex + 1 : 0} of {filtered.length}
                   <span className="mx-1.5 text-[var(--line-strong)]">·</span>
-                  {metadata.total_records} in your book
+                  {actionable} actionable · {metadata.total_records} assigned
                 </span>
                 <button
                   className="focusable flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-[12px] text-ink-muted transition-colors hover:bg-[var(--surface-2)] hover:text-ink-secondary"

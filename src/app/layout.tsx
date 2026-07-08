@@ -22,7 +22,10 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Collections Copilot — Clara",
+  title: {
+    default: "Collections Copilot — Clara",
+    template: "%s · Collections Copilot",
+  },
   description:
     "Internal collections workspace: work delinquent accounts, apply pre-computed policies, and log promises to pay.",
 };

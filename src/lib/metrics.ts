@@ -20,6 +20,39 @@ export interface CountBucket {
   amount?: number;
 }
 
+export interface BookStats {
+  assigned: number; // accounts routed to the internal channel
+  actionable: number; // have a computed policy (valid financials)
+  flagged: number; // needs review — no policy (bad/missing/duplicate data)
+  collectibleExposure: number; // amount due across actionable accounts
+  assignedExposure: number; // amount due across all assigned (positive amounts)
+}
+
+/**
+ * Reconcile the internal book into the numbers the analysis leads with. An
+ * account is "actionable" once the deterministic engine computed a policy for it
+ * (recommended_policy != null); the rest are flagged for data review. So
+ * collectible exposure excludes flagged accounts (bad DPD, missing/dup data).
+ */
+export function bookStats(accounts: Account[]): BookStats {
+  const actionable = accounts.filter((a) => a.recommended_policy != null);
+  const collectible = actionable.reduce(
+    (s, a) => s + (a.amount_due_usd ?? 0),
+    0,
+  );
+  const assignedExp = accounts.reduce((s, a) => {
+    const v = a.amount_due_usd ?? 0;
+    return s + (v > 0 ? v : 0);
+  }, 0);
+  return {
+    assigned: accounts.length,
+    actionable: actionable.length,
+    flagged: accounts.length - actionable.length,
+    collectibleExposure: Math.round(collectible * 100) / 100,
+    assignedExposure: Math.round(assignedExp * 100) / 100,
+  };
+}
+
 /**
  * Exposure (sum of amount_due) grouped by recommended policy lever. The book is
  * a single channel (Internal collections), so channel breakdown is meaningless
