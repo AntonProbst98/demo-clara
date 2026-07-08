@@ -3,15 +3,20 @@ import { writeFile, mkdir, rename } from "fs/promises";
 import path from "path";
 import { parseCsv, runInternalPipeline, type RawRow } from "@/lib/pipeline";
 import { parseXlsx } from "@/lib/xlsx";
+import { saveStoredBook, storeConfigured } from "@/lib/store";
 import type { CleanedData } from "@/lib/types";
 
 // POST /api/ingest
-// Front door for the data flow: an agent uploads a raw collections CSV, this
-// route hands it to the LIVE n8n webhook to clean/validate/score/route, then
-// persists the returned Internal collections book as the app's data source.
+// Front door for the data flow: an agent uploads a raw collections CSV/XLSX,
+// this route hands it to the LIVE n8n webhook to clean/validate/score/route,
+// then persists the returned Internal collections book as the app's data source.
 //
-//   CSV upload → /api/ingest → n8n webhook (Stage 1→2→Route·Channel→3)
-//              → data/internal_accounts.json → Workspace & Daily Progress
+//   CSV/XLSX upload → /api/ingest → n8n webhook (Stage 1→2→Route·Channel→3)
+//                   → KV store (prod) or data/internal_accounts.json (local dev)
+//                   → Workspace & Daily Progress
+//
+// Persistence: Vercel's runtime disk is read-only, so we persist to the KV store
+// when configured, and fall back to the on-disk file in local dev.
 //
 // If N8N_INGEST_WEBHOOK_URL is unset or the webhook errors/times out, we run the
 // identical pipeline in-process (src/lib/pipeline.ts) so a demo is never blocked
@@ -127,21 +132,28 @@ export async function POST(request: Request) {
     reason = "N8N_INGEST_WEBHOOK_URL not set";
   }
 
-  // Atomic write: ensure the dir exists, write a temp file, then rename over the
-  // target so a reader never sees a half-written file. The detailed error (code
-  // + resolved path) is surfaced so a persist failure is diagnosable, not opaque.
+  // Persist: prefer the KV store (works on Vercel's read-only runtime); fall back
+  // to an atomic on-disk write in local dev. The detailed error (code + where) is
+  // surfaced so a persist failure is diagnosable, not opaque.
+  let store: "kv" | "disk";
   try {
-    await mkdir(DATA_DIR, { recursive: true });
-    const tmp = `${DATA_PATH}.tmp`;
-    await writeFile(tmp, JSON.stringify(cleaned, null, 2) + "\n", "utf-8");
-    await rename(tmp, DATA_PATH);
+    if (await saveStoredBook(cleaned)) {
+      store = "kv";
+    } else {
+      await mkdir(DATA_DIR, { recursive: true });
+      const tmp = `${DATA_PATH}.tmp`;
+      await writeFile(tmp, JSON.stringify(cleaned, null, 2) + "\n", "utf-8");
+      await rename(tmp, DATA_PATH);
+      store = "disk";
+    }
   } catch (err) {
     const e = err as NodeJS.ErrnoException;
+    const where = storeConfigured() ? "KV store" : DATA_PATH;
     return NextResponse.json(
       {
         error: "Cleaned the data but could not persist it.",
         detail: `${e.code ? e.code + ": " : ""}${e.message ?? String(err)}`,
-        path: DATA_PATH,
+        where,
         source,
       },
       { status: 500 },
@@ -151,6 +163,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     source,
+    store,
     reason,
     rowsReceived: rows.length,
     metadata: cleaned.metadata,

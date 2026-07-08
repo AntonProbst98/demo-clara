@@ -21,6 +21,7 @@ const RAW_COLUMNS = [
 interface IngestResult {
   ok: boolean;
   source: "n8n" | "local-fallback";
+  store?: "kv" | "disk";
   reason?: string;
   rowsReceived: number;
   metadata: PortfolioMetadata;
@@ -56,7 +57,7 @@ export default function ImportPage() {
       if (!res.ok || !data.ok) {
         const parts = [data.error ?? "Ingest failed."];
         if (data.detail) parts.push(data.detail);
-        if (data.path) parts.push(`path: ${data.path}`);
+        if (data.where) parts.push(`at: ${data.where}`);
         throw new Error(parts.join(" — "));
       }
       setResult(data as IngestResult);
@@ -165,6 +166,12 @@ export default function ImportPage() {
                 : "Cleaned by local fallback"}
             </span>
           </div>
+
+          {result.store && (
+            <p className="mt-1 text-[12px] text-ink-muted">
+              Persisted to {result.store === "kv" ? "the KV store" : "local disk"}.
+            </p>
+          )}
 
           {result.source === "local-fallback" && result.reason && (
             <p className="mt-2 text-[12px] text-ink-muted">
