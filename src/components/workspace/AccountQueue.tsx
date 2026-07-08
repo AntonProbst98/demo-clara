@@ -63,7 +63,8 @@ export function AccountQueue({
           <input
             id="queue-search"
             aria-label="Search accounts by UUID or policy"
-            className="field pl-9 pr-9"
+            className="field"
+            style={{ paddingLeft: "34px", paddingRight: "30px" }}
             placeholder="Search UUID, policy…"
             value={filters.search}
             onChange={(e) =>

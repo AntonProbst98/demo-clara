@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { PortfolioMetadata } from "@/lib/types";
+import type { PortfolioMetadata, Promise as PromiseToPay } from "@/lib/types";
 import {
   type CountBucket,
   type BookStats,
@@ -9,7 +9,13 @@ import {
   summarizePromises,
 } from "@/lib/metrics";
 import { usePromises } from "@/components/providers/PromisesProvider";
-import { formatUSD, formatUSDCompact, formatNumber } from "@/lib/format";
+import {
+  formatUSD,
+  formatUSDExact,
+  formatUSDCompact,
+  formatNumber,
+  formatDate,
+} from "@/lib/format";
 import { StatTile } from "@/components/dashboard/StatTile";
 import { HBarChart } from "@/components/dashboard/charts";
 
@@ -78,6 +84,16 @@ export function Dashboard({
           />
         </div>
       </Section>
+
+      {/* Every promise logged today, in one place (findable across accounts) */}
+      <div className="mt-6">
+        <Card
+          title="Promises logged today"
+          subtitle="Every commitment captured, across all accounts"
+        >
+          <PromisesLog promises={promises} />
+        </Card>
+      </div>
 
       {/* Promises by policy + data quality */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -167,6 +183,50 @@ export function Dashboard({
         </div>
       </Section>
     </div>
+  );
+}
+
+// The individual commitments, newest first — so a promise logged in the
+// workspace is always findable here, not just in the aggregate KPIs or the CSV.
+function PromisesLog({ promises }: { promises: PromiseToPay[] }) {
+  if (promises.length === 0) {
+    return (
+      <p className="text-[13px] text-ink-muted">
+        No promises logged yet — log one in the Workspace.
+      </p>
+    );
+  }
+  const sorted = [...promises].sort((a, b) =>
+    b.loggedAt.localeCompare(a.loggedAt),
+  );
+  return (
+    <ul className="scroll-thin max-h-[280px] space-y-2 overflow-y-auto pr-1">
+      {sorted.map((p) => (
+        <li
+          key={p.id}
+          className="flex items-center gap-3 rounded-[8px] border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2.5"
+        >
+          <div className="min-w-0">
+            <div className="tnum truncate text-[13px] font-medium text-ink-secondary">
+              {p.accountUuid}
+            </div>
+            {p.policyAtLog && (
+              <div className="mt-0.5 truncate text-[12px] text-ink-muted">
+                {p.policyAtLog}
+              </div>
+            )}
+          </div>
+          <div className="ml-auto shrink-0 text-right">
+            <div className="tnum text-[14px] font-semibold text-ink">
+              {formatUSDExact(p.amount)}
+            </div>
+            <div className="text-[12px] text-ink-muted">
+              due {formatDate(p.dueDate)}
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
